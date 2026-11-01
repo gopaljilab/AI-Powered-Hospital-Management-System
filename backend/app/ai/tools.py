@@ -12,7 +12,51 @@ from app.models.schedule import DoctorSchedule
 from app.services.schedule_service import get_doctor_available_slots, check_slot_available_or_raise
 from app.services.audit_service import log_audit
 
-# OpenAI Tool Definitions
+# Google Gemini Tool Declarations (Native Python Callables)
+def search_doctors(department: str = "", name: str = "") -> str:
+    """Search for hospital doctors by medical department or doctor name or specialization."""
+    return ""
+
+def get_doctor_details(doctor_id: int) -> str:
+    """Retrieve comprehensive details for a specific doctor including qualification, fee, and experience."""
+    return ""
+
+def get_available_slots(doctor_id: int, date: str) -> str:
+    """Get real-time available appointment slots for a doctor on a specific date in YYYY-MM-DD format."""
+    return ""
+
+def book_appointment(doctor_id: int, slot_start: str, notes: str = "") -> str:
+    """Book a confirmed hospital appointment for the authenticated patient with a doctor at a designated slot start time."""
+    return ""
+
+def get_my_appointments() -> str:
+    """Retrieve all upcoming and past hospital appointments for the currently logged in patient."""
+    return ""
+
+def reschedule_appointment(appointment_id: int, new_slot: str) -> str:
+    """Reschedule an existing confirmed appointment to a new available slot."""
+    return ""
+
+def cancel_appointment(appointment_id: int, reason: str = "") -> str:
+    """Cancel an existing appointment for the authenticated patient."""
+    return ""
+
+def get_hospital_faq(question: str) -> str:
+    """Retrieve general hospital operational information such as visiting hours, parking, insurance, billing, and facilities."""
+    return ""
+
+GEMINI_HOSPITAL_TOOLS = [
+    search_doctors,
+    get_doctor_details,
+    get_available_slots,
+    book_appointment,
+    get_my_appointments,
+    reschedule_appointment,
+    cancel_appointment,
+    get_hospital_faq
+]
+
+# Standard Tool Schema Definitions (JSON schema compatible)
 HOSPITAL_TOOLS = [
     {
         "type": "function",

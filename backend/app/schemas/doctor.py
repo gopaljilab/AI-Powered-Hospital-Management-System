@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from datetime import time, date
 
@@ -15,8 +15,7 @@ class ScheduleOut(ScheduleBase):
     id: int
     doctor_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ExceptionBase(BaseModel):
     date: date
@@ -29,8 +28,7 @@ class ExceptionOut(ExceptionBase):
     id: int
     doctor_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DoctorBase(BaseModel):
     name: str
@@ -62,8 +60,7 @@ class DepartmentSimple(BaseModel):
     id: int
     name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DoctorOut(DoctorBase):
     id: int
@@ -72,5 +69,4 @@ class DoctorOut(DoctorBase):
     schedules: List[ScheduleOut] = []
     exceptions: List[ExceptionOut] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

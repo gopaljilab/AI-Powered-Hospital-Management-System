@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -27,8 +27,7 @@ class DoctorSimpleOut(BaseModel):
     consultation_fee: float
     profile_image: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PatientSimpleOut(BaseModel):
     id: int
@@ -36,8 +35,7 @@ class PatientSimpleOut(BaseModel):
     user_name: Optional[str] = None
     user_email: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class AppointmentOut(BaseModel):
     id: int
@@ -51,5 +49,4 @@ class AppointmentOut(BaseModel):
     doctor: Optional[DoctorSimpleOut] = None
     patient: Optional[PatientSimpleOut] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

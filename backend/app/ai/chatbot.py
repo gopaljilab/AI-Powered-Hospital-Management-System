@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.models.chat import Conversation, Message
 from app.models.user import User
 from app.models.patient import Patient
-from app.ai.tools import HOSPITAL_TOOLS, execute_backend_tool
+from app.ai.tools import GEMINI_HOSPITAL_TOOLS, HOSPITAL_TOOLS, execute_backend_tool
 
 # Emergency keyword patterns
 EMERGENCY_KEYWORDS = [
@@ -56,7 +56,7 @@ def fallback_rule_based_response(
 ) -> Tuple[str, Optional[Dict[str, Any]], List[str]]:
     """
     Intelligent rule-based fallback assistant that ensures full functionality
-    even when OpenAI API key is not configured or external service is unreachable.
+    even when Gemini API key is not configured or external service is unreachable.
     """
     lowered = message.lower()
 
@@ -95,19 +95,16 @@ def fallback_rule_based_response(
 
     # 4. Slots or dates inquiry
     if any(k in lowered for k in ["slot", "available", "schedule", "tomorrow", "time"]):
-        # Check if doctor name or department is mentioned
         dep_match = None
         for dep in ["cardiology", "dermatology", "pediatrics", "orthopedics", "neurology", "general"]:
             if dep in lowered:
                 dep_match = dep
                 break
 
-        # Tomorrow's date
         target_date = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d")
         if "today" in lowered:
             target_date = date.today().strftime("%Y-%m-%d")
 
-        # Find first matching or top doctor
         doc_res = execute_backend_tool("search_doctors", {"department": dep_match or "general"}, db)
         doctors = doc_res.get("doctors", [])
         if doctors:
@@ -173,7 +170,7 @@ def process_chat_message(
     Main conversational pipeline:
     1. Manages or creates conversation session.
     2. Enforces safety & emergency rules.
-    3. Leverages OpenAI function calling with official SDK if API key available.
+    3. Leverages Google Gemini API (gemini-1.5-flash / gemini-2.0-flash) with tool calling.
     4. Falls back seamlessly to rule-based assistant if key is missing or offline.
     5. Persists conversation and message history.
     """
@@ -222,41 +219,58 @@ def process_chat_message(
             "suggested_prompts": suggested
         }
 
-    # Attempt OpenAI API if key exists
-    api_key = os.getenv("OPENAI_API_KEY") or settings.OPENAI_API_KEY
-    if api_key and api_key != "sk-placeholder" and len(api_key) > 10:
-        try:
-            from openai import OpenAI
-            client = OpenAI(api_key=api_key)
+    # Attempt Google Gemini API if key exists
+    gemini_key = (
+        os.getenv("GEMINI_API_KEY") or
+        os.getenv("GOOGLE_API_KEY") or
+        settings.GEMINI_API_KEY or
+        settings.GOOGLE_API_KEY
+    )
 
-            # Build message history (last 8 messages for context)
+    if gemini_key and gemini_key != "your_gemini_api_key_here" and len(gemini_key) > 8:
+        try:
+            from google import genai
+            from google.genai import types
+
+            client = genai.Client(api_key=gemini_key)
+
+            # Build message history for Gemini
             past_messages = db.query(Message).filter(
                 Message.conversation_id == conversation.id
-            ).order_by(Message.created_at.asc()).limit(8).all()
+            ).order_by(Message.created_at.asc()).limit(6).all()
 
-            messages_payload = [{"role": "system", "content": SYSTEM_PROMPT}]
+            contents = []
             for msg in past_messages:
-                messages_payload.append({"role": msg.role, "content": msg.content})
+                role = "user" if msg.role == "user" else "model"
+                contents.append(
+                    types.Content(
+                        role=role,
+                        parts=[types.Part.from_text(text=msg.content)]
+                    )
+                )
 
-            # Call OpenAI completion with tools
-            response = client.chat.completions.create(
-                model=settings.OPENAI_MODEL,
-                messages=messages_payload,
-                tools=HOSPITAL_TOOLS,
-                tool_choice="auto"
+            # Configure tool calling
+            config = types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                tools=GEMINI_HOSPITAL_TOOLS,
+                temperature=0.2,
             )
 
-            response_msg = response.choices[0].message
+            response = client.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=contents,
+                config=config
+            )
+
             ui_attachment = None
+            final_text = ""
 
-            if response_msg.tool_calls:
-                # Execute tools requested by the AI
-                tool_messages = [response_msg]
-                for tc in response_msg.tool_calls:
-                    fn_name = tc.function.name
-                    fn_args = json.loads(tc.function.arguments or "{}")
+            if response.function_calls:
+                tool_results_parts = []
+                for fc in response.function_calls:
+                    fn_name = fc.name
+                    fn_args = dict(fc.args) if fc.args else {}
 
-                    # Enforce backend validation and database operations
                     tool_result = execute_backend_tool(
                         tool_name=fn_name,
                         args=fn_args,
@@ -265,26 +279,30 @@ def process_chat_message(
                         user_id=user_id
                     )
 
-                    # Extract UI data payload if present
                     if "_ui_type" in tool_result:
                         ui_type = tool_result.pop("_ui_type")
                         ui_attachment = {"type": ui_type, "data": tool_result}
 
-                    tool_messages.append({
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "name": fn_name,
-                        "content": json.dumps(tool_result)
-                    })
+                    tool_results_parts.append(
+                        types.Part.from_function_response(
+                            name=fn_name,
+                            response={"result": json.dumps(tool_result)}
+                        )
+                    )
 
-                # Follow-up completion with tool output
-                second_response = client.chat.completions.create(
-                    model=settings.OPENAI_MODEL,
-                    messages=messages_payload + tool_messages
+                # Send function response back to Gemini for conversational synthesis
+                if response.candidates and response.candidates[0].content:
+                    contents.append(response.candidates[0].content)
+                contents.append(types.Content(role="tool", parts=tool_results_parts))
+
+                second_response = client.models.generate_content(
+                    model=settings.GEMINI_MODEL,
+                    contents=contents,
+                    config=config
                 )
-                final_text = second_response.choices[0].message.content or "I have processed your request."
+                final_text = second_response.text or "I have retrieved the verified information from our hospital database."
             else:
-                final_text = response_msg.content or "How may I help you today?"
+                final_text = response.text or "How may I assist you today?"
 
             # Save assistant message
             assistant_msg = Message(
@@ -304,8 +322,7 @@ def process_chat_message(
             }
 
         except Exception as e:
-            # Fall back safely to rule-based assistant
-            print(f"[AI Chatbot Fallback] OpenAI error or quota reached: {e}")
+            print(f"[Gemini AI Fallback] Gemini API notice: {e}")
 
     # Fallback to intelligent rule-based engine
     reply, ui_payload, suggested = fallback_rule_based_response(user_message, db, patient_id, user_id)

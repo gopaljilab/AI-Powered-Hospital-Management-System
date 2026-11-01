@@ -31,8 +31,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgrespassword@postgres:5432/hospitalx
       SECRET_KEY: hospitalx_super_secret_jwt_key_2026_dev_environment_only
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_MODEL: gpt-4o-mini
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: gemini-1.5-flash
     ports:
       - "8000:8000"
 

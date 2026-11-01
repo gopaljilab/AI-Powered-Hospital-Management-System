@@ -26,7 +26,7 @@ export const AssistantPage: React.FC = () => {
         <div className="flex items-center gap-2 text-xs">
           <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 flex items-center gap-1.5 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            OpenAI Tool-Calling Active
+            Google Gemini AI Active
           </span>
         </div>
       </div>

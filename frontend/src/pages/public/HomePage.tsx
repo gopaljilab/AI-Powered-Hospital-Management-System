@@ -150,7 +150,7 @@ export const HomePage: React.FC = () => {
                     </div>
                   </div>
                   <span className="text-[10px] font-bold text-brand-700 bg-brand-50 px-2 py-1 rounded-md">
-                    FastAPI + OpenAI
+                    FastAPI + Google Gemini
                   </span>
                 </div>
 
