@@ -359,18 +359,19 @@ def execute_backend_tool(
         db.commit()
         db.refresh(appointment)
 
+        doc_prefix = doctor.name if doctor.name.startswith("Dr.") else f"Dr. {doctor.name}"
         log_audit(
             db,
             action="CHATBOT_BOOK_APPOINTMENT",
             entity="Appointment",
             actor_id=user_id,
             entity_id=appointment.id,
-            details=f"Booked via AI Assistant with Dr. {doctor.name} on {slot_start}"
+            details=f"Booked via AI Assistant with {doc_prefix} on {slot_start}"
         )
 
         return {
             "status": "success",
-            "message": f"Appointment successfully confirmed with Dr. {doctor.name} for {slot_start.strftime('%B %d, %Y at %I:%M %p')}.",
+            "message": f"Appointment successfully confirmed with {doc_prefix} for {slot_start.strftime('%B %d, %Y at %I:%M %p')}.",
             "appointment": {
                 "id": appointment.id,
                 "doctor_name": doctor.name,
@@ -438,9 +439,10 @@ def execute_backend_tool(
             details=f"Cancelled appointment #{appointment.id} via AI Assistant"
         )
 
+        doc_prefix = appointment.doctor.name if appointment.doctor.name.startswith("Dr.") else f"Dr. {appointment.doctor.name}"
         return {
             "status": "success",
-            "message": f"Appointment #{app_id} with Dr. {appointment.doctor.name} has been cancelled successfully.",
+            "message": f"Appointment #{app_id} with {doc_prefix} has been cancelled successfully.",
             "_ui_type": "cancellation_notice"
         }
 

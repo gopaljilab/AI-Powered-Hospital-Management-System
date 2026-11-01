@@ -111,7 +111,8 @@ def fallback_rule_based_response(
             selected_doc = doctors[0]
             slot_res = execute_backend_tool("get_available_slots", {"doctor_id": selected_doc["id"], "date": target_date}, db)
             available = slot_res.get("available_slots", [])
-            reply = f"Here are the available appointment slots for **Dr. {selected_doc['name']}** ({selected_doc['specialization']}) on **{target_date}**:"
+            doc_name = selected_doc['name'] if selected_doc['name'].startswith("Dr.") else f"Dr. {selected_doc['name']}"
+            reply = f"Here are the available appointment slots for **{doc_name}** ({selected_doc['specialization']}) on **{target_date}**:"
             return (
                 reply,
                 {
