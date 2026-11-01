@@ -20,6 +20,7 @@ export const FloatingChatWidget: React.FC = () => {
                 <Maximize2 className="w-3.5 h-3.5" />
               </Link>
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
                 className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
               >
@@ -31,6 +32,7 @@ export const FloatingChatWidget: React.FC = () => {
         </div>
       ) : (
         <button
+          type="button"
           onClick={() => setIsOpen(true)}
           className="group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-brand-600 via-teal-600 to-teal-500 hover:from-brand-700 hover:to-teal-700 text-white rounded-full shadow-xl shadow-brand-500/30 hover:scale-105 active:scale-95 transition-all"
         >

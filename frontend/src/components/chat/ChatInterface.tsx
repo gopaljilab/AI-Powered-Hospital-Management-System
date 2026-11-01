@@ -5,9 +5,7 @@ import {
   User, 
   Sparkles, 
   AlertTriangle, 
-  Calendar, 
   RefreshCw, 
-  CheckCircle, 
   Clock, 
   PhoneCall, 
   Stethoscope 
@@ -62,14 +60,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialPrompt, isD
     slotStart: '',
   });
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Reference strictly to the scrollable message container to prevent page viewport jumping
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: behavior,
+      });
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
+    scrollToBottom('smooth');
   }, [messages, isLoading]);
 
   useEffect(() => {
@@ -147,7 +151,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialPrompt, isD
       notes: notes || "Booked through conversational assistant",
     });
 
-    // Append booking confirmation message into conversation
     const confirmMsg: Message = {
       id: Date.now(),
       role: 'assistant',
@@ -161,10 +164,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialPrompt, isD
   };
 
   return (
-    <div className={`flex flex-col bg-slate-50 ${isDrawer ? 'h-[550px]' : 'h-[750px] max-h-[85vh]'} rounded-3xl border border-slate-200 shadow-xl overflow-hidden`}>
-      {/* Header */}
-      <div className="bg-gradient-to-r from-brand-700 via-brand-600 to-teal-700 p-4 text-white flex items-center justify-between shrink-0 shadow-sm">
-        <div className="flex items-center space-x-3">
+    <div
+      className={`flex flex-col bg-white ${
+        isDrawer ? 'h-[550px]' : 'h-[calc(100vh-175px)] min-h-[580px] max-h-[760px]'
+      } rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden`}
+    >
+      {/* Fixed Chat Header */}
+      <div className="bg-gradient-to-r from-brand-700 via-brand-600 to-teal-700 px-5 py-4 text-white flex items-center justify-between shrink-0 shadow-sm">
+        <div className="flex items-center space-x-3.5">
           <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-teal-300 border border-white/20 shadow-inner">
             <Bot className="w-6 h-6 animate-pulse" />
           </div>
@@ -180,7 +187,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialPrompt, isD
           </div>
         </div>
         <button
-          onClick={() => {
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
             setMessages([
               {
                 id: 'reset',
@@ -197,8 +206,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialPrompt, isD
         </button>
       </div>
 
-      {/* Message Stream */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+      {/* Messages Scroll Area with container-bound scrolling */}
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 space-y-4 bg-slate-50/70"
+      >
         {messages.map((msg) => {
           const isUser = msg.role === 'user';
           return (
@@ -218,7 +230,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialPrompt, isD
               </div>
 
               {/* Message Bubble & Cards */}
-              <div className={`max-w-[85%] sm:max-w-[75%] space-y-3`}>
+              <div className={`max-w-[88%] sm:max-w-[80%] space-y-3`}>
                 <div
                   className={`p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                     isUser
@@ -252,17 +264,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialPrompt, isD
                       </div>
                     )}
 
-                    {/* Doctors List Cards */}
+                    {/* Doctors List: Horizontal carousel with generous width to prevent text squishing */}
                     {msg.tool_call_data.type === 'doctors_list' && msg.tool_call_data.doctors && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {msg.tool_call_data.doctors.map((doc: any) => (
-                          <DoctorCard
-                            key={doc.id}
-                            doctor={doc}
-                            onSelectSlot={handleSelectDoctorForSlots}
-                            onBookNow={(d) => handleSendMessage(`I want to book an appointment with Dr. ${d.name}`)}
-                          />
-                        ))}
+                      <div className="w-full">
+                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                          Matching Doctors ({msg.tool_call_data.doctors.length})
+                        </p>
+                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin no-scrollbar w-full">
+                          {msg.tool_call_data.doctors.map((doc: any) => (
+                            <div key={doc.id} className="min-w-[270px] max-w-[290px] flex-shrink-0">
+                              <DoctorCard
+                                doctor={doc}
+                                onSelectSlot={handleSelectDoctorForSlots}
+                                onBookNow={(d) => handleSendMessage(`I want to book an appointment with Dr. ${d.name}`)}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
@@ -279,7 +297,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialPrompt, isD
 
                     {/* My Appointments list */}
                     {msg.tool_call_data.type === 'my_appointments' && msg.tool_call_data.data && (
-                      <div className="bg-white border border-slate-200 rounded-2xl p-3.5 space-y-2">
+                      <div className="bg-white border border-slate-200 rounded-2xl p-3.5 space-y-2 shadow-xs">
                         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                           <span className="text-xs font-bold text-slate-800">Registered Appointments</span>
                           <span className="text-[11px] text-brand-600 font-semibold">{msg.tool_call_data.data.length} Total</span>
@@ -323,25 +341,27 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialPrompt, isD
             </div>
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
 
-      {/* Suggested Prompts */}
-      <div className="px-4 py-2 bg-white/70 border-t border-slate-100 shrink-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      {/* Suggested Prompts Bar */}
+      <div className="px-4 py-2.5 bg-slate-50/90 border-t border-slate-100 shrink-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
         <Sparkles className="w-3.5 h-3.5 text-brand-600 shrink-0 ml-1" />
         {suggestedPrompts.map((prompt, idx) => (
           <button
+            type="button"
             key={idx}
-            onClick={() => handleSendMessage(prompt)}
-            className="px-3 py-1 text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 border border-slate-200/80 rounded-full whitespace-nowrap transition-colors"
+            onClick={(e) => {
+              e.preventDefault();
+              handleSendMessage(prompt);
+            }}
+            className="px-3 py-1 text-[11px] font-medium text-slate-700 bg-white hover:bg-brand-50 hover:text-brand-700 hover:border-brand-300 border border-slate-200/90 rounded-full whitespace-nowrap transition-colors shadow-2xs"
           >
             {prompt}
           </button>
         ))}
       </div>
 
-      {/* Input Form */}
+      {/* Fixed Bottom Input Bar */}
       <div className="p-3 sm:p-4 bg-white border-t border-slate-200 shrink-0">
         <div className="flex items-center gap-2">
           <input
@@ -354,7 +374,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialPrompt, isD
             className="flex-1 bg-slate-50 border border-slate-200 focus:border-brand-500 focus:bg-white text-xs sm:text-sm rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all placeholder:text-slate-400 disabled:opacity-60"
           />
           <button
-            onClick={() => handleSendMessage()}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
             disabled={!inputValue.trim() || isLoading}
             className="p-3 bg-gradient-to-r from-brand-600 to-teal-600 hover:from-brand-700 hover:to-teal-700 text-white rounded-2xl shadow-md shadow-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0"
           >

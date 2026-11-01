@@ -27,7 +27,8 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
 
   const availableSlots = slots.filter((s) => s.is_available);
 
-  const handleConfirm = () => {
+  const handleConfirm = (e: React.MouseEvent) => {
+    e.preventDefault();
     if (selectedSlot) {
       onSelectSlot(selectedSlot);
     }
@@ -43,7 +44,7 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
             </h4>
           )}
           <p className="text-[11px] text-brand-600 flex items-center gap-1 mt-0.5 font-medium">
-            <Calendar className="w-3 h-3" />
+            <Calendar className="w-3.5 h-3.5" />
             <span>Target Date: {dateStr || 'Available Times'}</span>
           </p>
         </div>
@@ -63,8 +64,12 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
               const isSelected = selectedSlot?.slot_start === slot.slot_start;
               return (
                 <button
+                  type="button"
                   key={idx}
-                  onClick={() => setSelectedSlot(slot)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedSlot(slot);
+                  }}
                   className={`px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center justify-between border ${
                     isSelected
                       ? 'bg-brand-600 text-white border-brand-600 shadow-sm shadow-brand-500/30'
@@ -72,7 +77,7 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
                   }`}
                 >
                   <span className="flex items-center gap-1.5 truncate">
-                    <Clock className={`w-3 h-3 ${isSelected ? 'text-brand-100' : 'text-slate-400'}`} />
+                    <Clock className={`w-3.5 h-3.5 ${isSelected ? 'text-brand-100' : 'text-slate-400'}`} />
                     {slot.time.split('-')[0].trim()}
                   </span>
                   {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />}
@@ -87,6 +92,7 @@ export const SlotPicker: React.FC<SlotPickerProps> = ({
                 Selected: <strong className="text-brand-700">{selectedSlot.time}</strong>
               </span>
               <button
+                type="button"
                 onClick={handleConfirm}
                 className="px-4 py-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg shadow-sm transition-all"
               >
